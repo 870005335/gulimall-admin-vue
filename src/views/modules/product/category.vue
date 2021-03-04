@@ -19,6 +19,9 @@
           >
             新增
           </el-button>
+          <el-button type="text" size="mini" @click="() => edit(data)">
+            编辑
+          </el-button>
           <el-button
             v-if="node.childNodes.length == 0"
             type="text"
@@ -30,15 +33,29 @@
         </span>
       </span>
     </el-tree>
-    <el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
+    <el-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      width="40%"
+      :close-on-click-modal="false"
+    >
       <el-form :model="category">
         <el-form-item label="分类名称">
           <el-input v-model="category.name" autocomplete="off"></el-input>
         </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="category.icon" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="计量单位">
+          <el-input
+            v-model="category.productUnit"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="addCategory">确 定</el-button>
+        <el-button type="primary" @click="submitData">确 定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -49,7 +66,9 @@ export default {
   components: {},
   data() {
     return {
-      category: { showStatus: 1, sort: 0 },
+      dialogTitle: "新增分类",
+      dialogType: "add",
+      category: { name: "" },
       dialogVisible: false,
       menu: [],
       expandedKey: [],
@@ -62,6 +81,7 @@ export default {
   computed: {},
   watch: {},
   methods: {
+    // 向后台发送请求获取树形结构数据
     getMenus() {
       this.$http({
         url: this.$http.adornUrl("/product/category/list/tree"),
@@ -72,11 +92,56 @@ export default {
         }
       });
     },
+    edit(data) {
+      this.dialogType = "edit";
+      this.dialogTitle = "编辑分类";
+      this.dialogVisible = true;
+      // 请求后台接口获取分类详情数据
+      this.$http({
+        url: this.$http.adornUrl("/product/category/info"),
+        method: "get",
+        params: this.$http.adornParams({ catId: data.catId }, false),
+      }).then(({ data }) => {
+        this.category = data.data;
+      });
+    },
     append(data) {
       this.dialogVisible = true;
+      this.category = {};
       this.category.parentCid = data.catId;
       this.category.catLevel = data.catLevel * 1 + 1;
+      this.category.showStatus = 1;
+      this.category.sort = 0;
     },
+    submitData() {
+      if (this.dialogType === "edit") {
+        this.editCategory();
+      } else {
+        this.addCategory();
+      }
+    },
+    editCategory() {
+      var { catId, name, icon, productUnit } = this.category;
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update"),
+        method: "post",
+        data: this.$http.adornData({ catId, name, icon, productUnit }, false),
+      }).then(({ data }) => {
+        if (data.code === 0) {
+          this.$message({
+            message: "编辑分类成功",
+            type: "success",
+            duration: 1000,
+          });
+          this.expandedKey = [this.category.parentCid];
+          this.dialogVisible = false;
+          this.getMenus();
+        } else {
+          this.$message.error(data.msg);
+        }
+      });
+    },
+    // 向后台发送请求保存分类数据
     addCategory() {
       this.$http({
         url: this.$http.adornUrl("/product/category/save"),

@@ -49,7 +49,7 @@ export default {
   components: {},
   data() {
     return {
-      category: {},
+      category: { showStatus: 1, sort: 0 },
       dialogVisible: false,
       menu: [],
       expandedKey: [],
@@ -76,11 +76,26 @@ export default {
       this.dialogVisible = true;
       this.category.parentCid = data.catId;
       this.category.catLevel = data.catLevel * 1 + 1;
-      this.category.showStatus = 1;
-      this.category.sort = 0;
     },
     addCategory() {
-      console.log(this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      }).then(({ data }) => {
+        if (data.code === 0) {
+          this.$message({
+            message: "新增分类成功",
+            type: "success",
+            duration: 1000,
+          });
+          this.expandedKey = [this.category.parentCid];
+          this.dialogVisible = false;
+          this.getMenus();
+        } else {
+          this.$message.error(data.msg);
+        }
+      });
     },
     remove(node, data) {
       // 获取当前删除的节点id
@@ -99,7 +114,7 @@ export default {
           }).then(({ data }) => {
             if (data.code === 0) {
               this.$message({
-                message: "操作成功",
+                message: "删除分类成功",
                 type: "success",
                 duration: 1000,
               });

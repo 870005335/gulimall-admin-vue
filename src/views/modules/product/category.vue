@@ -1,5 +1,8 @@
 <template>
   <div>
+    <el-button type="danger" size="small" @click="batchDelete"
+      >批量删除</el-button
+    >
     <el-tree
       :data="menu"
       :props="defaultProps"
@@ -7,6 +10,9 @@
       show-checkbox
       node-key="catId"
       :default-expanded-keys="expandedKey"
+      :draggable="true"
+      :allow-drop="allowDrop"
+      @node-drop="handleDrop"
     >
       <span class="custom-tree-node" slot-scope="{ node, data }">
         <span>{{ node.label }}</span>
@@ -66,6 +72,8 @@ export default {
   components: {},
   data() {
     return {
+      updateNodes: [],
+      maxLevel: 0,
       dialogTitle: "新增分类",
       dialogType: "add",
       category: { name: "" },
@@ -91,6 +99,115 @@ export default {
           this.menu = data.data.trees;
         }
       });
+    },
+    batchDelete() {
+      let catIds = [];
+      let checkedNodes = this.$refs.menuTree.getCheckedNodes();
+      console.log(checkedNodes);
+    },
+    // 批量修改分类节点
+    updateCategoryBatch() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update/batch"),
+        method: "post",
+        data: this.$http.adornData(this.updateNodes, false),
+      }).then(({ data }) => {
+        if (data.code === 0) {
+          this.$message({
+            message: "编辑成功",
+            type: "success",
+            duration: 1000,
+          });
+        } else {
+          this.$message.error(data.message);
+        }
+        //刷新出新的菜单
+        this.getMenus();
+      });
+    },
+    handleDrop(draggingNode, dropNode, dropType, ev) {
+      // console.log(draggingNode, dropNode, dropType);
+      // 拖拽节点完成之后的父节点id
+      let parentCid = 0;
+      // 拖拽节点完成之后的兄弟节点数组
+      let siblings = [];
+      if (dropType == "before" || dropType == "after") {
+        parentCid =
+          dropNode.parent.data.catId == undefined
+            ? 0
+            : dropNode.parent.data.catId;
+        siblings = dropNode.parent.childNodes;
+      } else {
+        parentCid = dropNode.data.catId;
+        siblings = dropNode.childNodes;
+      }
+      // 重新遍历排序兄弟节点数组
+      for (let i = 0; i < siblings.length; i++) {
+        // 遍历到拖拽节点
+        if (siblings[i].data.catId == draggingNode.data.catId) {
+          // 节点层级发生变化
+          let draggingNodeLevel = draggingNode.level;
+          if (draggingNode.level != siblings[i].level) {
+            draggingNodeLevel = siblings[i].level;
+            // 修改子节点层级
+            this.updateChildNodesLevel(siblings[i]);
+          }
+          this.updateNodes.push({
+            catId: siblings[i].data.catId,
+            sort: i,
+            parentCid: parentCid,
+            catLevel: draggingNodeLevel,
+          });
+        } else {
+          this.updateNodes.push({ catId: siblings[i].data.catId, sort: i });
+        }
+      }
+      // console.log(this.updateNodes);
+      // 向后台发送请求
+      this.updateCategoryBatch();
+      //设置需要默认展开的菜单
+      this.expandedKey = [parentCid];
+      this.updateNodes = [];
+      this.maxLevel = 0;
+    },
+    updateChildNodesLevel(node) {
+      if (node.childNodes != null && node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          var cNode = node.childNodes[i].data;
+          this.updateNodes.push({
+            catId: cNode.catId,
+            catLevel: node.childNodes[i].level,
+          });
+          this.updateChildNodesLevel(node.childNodes[i]);
+        }
+      }
+    },
+    allowDrop(draggingNode, dropNode, type) {
+      // console.log(draggingNode, dropNode, type)
+      // 计算以当前拖拽节点为根节点的树的深度
+      this.caculateMaxLevel(draggingNode);
+      let deep = Math.abs(this.maxLevel - draggingNode.level) + 1;
+      console.log(this.maxLevel, deep, type, draggingNode.level);
+      console.log(
+        draggingNode.childNodes && draggingNode.childNodes.length > 0
+      );
+      if (type === "inner") {
+        return deep + dropNode.level <= 3;
+      }
+      return deep + dropNode.parent.level <= 3;
+    },
+    caculateMaxLevel(node) {
+      // 找出节点的最深度子节点
+      if (node.childNodes && node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          if (node.childNodes[i].level > this.maxLevel) {
+            this.maxLevel = node.childNodes[i].level;
+          }
+          this.caculateMaxLevel(node.childNodes[i]);
+        }
+      } else {
+        this.maxLevel = node.level;
+      }
     },
     edit(data) {
       this.dialogType = "edit";

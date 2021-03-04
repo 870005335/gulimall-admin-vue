@@ -1,8 +1,6 @@
 <template>
   <div>
-    <el-button type="danger" size="small" @click="batchDelete"
-      >批量删除</el-button
-    >
+    <el-button type="danger" size="small" @click="batchDelete">批量删除</el-button>
     <el-tree
       :data="menu"
       :props="defaultProps"
@@ -13,6 +11,7 @@
       :draggable="true"
       :allow-drop="allowDrop"
       @node-drop="handleDrop"
+      ref="menuTree"
     >
       <span class="custom-tree-node" slot-scope="{ node, data }">
         <span>{{ node.label }}</span>
@@ -25,9 +24,7 @@
           >
             新增
           </el-button>
-          <el-button type="text" size="mini" @click="() => edit(data)">
-            编辑
-          </el-button>
+          <el-button type="text" size="mini" @click="() => edit(data)"> 编辑 </el-button>
           <el-button
             v-if="node.childNodes.length == 0"
             type="text"
@@ -53,10 +50,7 @@
           <el-input v-model="category.icon" autocomplete="off"></el-input>
         </el-form-item>
         <el-form-item label="计量单位">
-          <el-input
-            v-model="category.productUnit"
-            autocomplete="off"
-          ></el-input>
+          <el-input v-model="category.productUnit" autocomplete="off"></el-input>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -103,7 +97,32 @@ export default {
     batchDelete() {
       let catIds = [];
       let checkedNodes = this.$refs.menuTree.getCheckedNodes();
+      catIds = checkedNodes.map((check) => check.catId);
       console.log(checkedNodes);
+      if (catIds.length === 0) {
+        this.$message({
+          message: "未选中节点，请重试",
+          type: "warning",
+          duration: 1000,
+        });
+      } else {
+        this.$http({
+          url: this.$http.adornUrl("/product/category/delete"),
+          method: "post",
+          data: this.$http.adornData(catIds, false),
+        }).then(({ data }) => {
+          if (data.code === 0) {
+            this.$message({
+              message: "批量删除成功",
+              type: "success",
+              duration: 1000,
+            });
+          } else {
+            this.$message.error(data.msg);
+          }
+          this.getMenus();
+        });
+      }
     },
     // 批量修改分类节点
     updateCategoryBatch() {
@@ -133,9 +152,7 @@ export default {
       let siblings = [];
       if (dropType == "before" || dropType == "after") {
         parentCid =
-          dropNode.parent.data.catId == undefined
-            ? 0
-            : dropNode.parent.data.catId;
+          dropNode.parent.data.catId == undefined ? 0 : dropNode.parent.data.catId;
         siblings = dropNode.parent.childNodes;
       } else {
         parentCid = dropNode.data.catId;
@@ -187,10 +204,6 @@ export default {
       // 计算以当前拖拽节点为根节点的树的深度
       this.caculateMaxLevel(draggingNode);
       let deep = Math.abs(this.maxLevel - draggingNode.level) + 1;
-      console.log(this.maxLevel, deep, type, draggingNode.level);
-      console.log(
-        draggingNode.childNodes && draggingNode.childNodes.length > 0
-      );
       if (type === "inner") {
         return deep + dropNode.level <= 3;
       }
@@ -328,6 +341,6 @@ export default {
   activated() {},
 };
 </script>
-<style lang='scss' scoped>
+<style lang="scss" scoped>
 //@import url(); 引入公共css类
 </style>

@@ -1,8 +1,16 @@
 <template>
   <div class="mod-config">
-    <el-form :inline="true" :model="dataForm" @keyup.enter.native="getDataList()">
+    <el-form
+      :inline="true"
+      :model="dataForm"
+      @keyup.enter.native="getDataList()"
+    >
       <el-form-item>
-        <el-input v-model="dataForm.key" placeholder="参数名" clearable></el-input>
+        <el-input
+          v-model="dataForm.key"
+          placeholder="参数名"
+          clearable
+        ></el-input>
       </el-form-item>
       <el-form-item>
         <el-button @click="getDataList()">查询</el-button>
@@ -28,11 +36,26 @@
       @selection-change="selectionChangeHandle"
       style="width: 100%"
     >
-      <el-table-column type="selection" header-align="center" align="center" width="50">
+      <el-table-column
+        type="selection"
+        header-align="center"
+        align="center"
+        width="50"
+      >
       </el-table-column>
-      <el-table-column prop="brandId" header-align="center" align="center" label="品牌id">
+      <el-table-column
+        prop="brandId"
+        header-align="center"
+        align="center"
+        label="品牌id"
+      >
       </el-table-column>
-      <el-table-column prop="name" header-align="center" align="center" label="品牌名">
+      <el-table-column
+        prop="name"
+        header-align="center"
+        align="center"
+        label="品牌名"
+      >
       </el-table-column>
       <el-table-column
         prop="logo"
@@ -40,8 +63,20 @@
         align="center"
         label="品牌logo地址"
       >
+        <template slot-scope="scope">
+          <el-image
+            style="width: 100px; height: 100px"
+            :src="scope.row.logo"
+            :fit="fill"
+          ></el-image>
+        </template>
       </el-table-column>
-      <el-table-column prop="descript" header-align="center" align="center" label="介绍">
+      <el-table-column
+        prop="descript"
+        header-align="center"
+        align="center"
+        label="介绍"
+      >
       </el-table-column>
       <el-table-column
         prop="showStatus"
@@ -68,7 +103,12 @@
         label="检索首字母"
       >
       </el-table-column>
-      <el-table-column prop="sort" header-align="center" align="center" label="排序">
+      <el-table-column
+        prop="sort"
+        header-align="center"
+        align="center"
+        label="排序"
+      >
       </el-table-column>
       <el-table-column
         fixed="right"
@@ -84,7 +124,10 @@
             @click="addOrUpdateHandle(scope.row.brandId)"
             >修改</el-button
           >
-          <el-button type="text" size="small" @click="deleteHandle(scope.row.brandId)"
+          <el-button
+            type="text"
+            size="small"
+            @click="deleteHandle(scope.row.brandId)"
             >删除</el-button
           >
         </template>
@@ -159,7 +202,7 @@ export default {
       console.log(data);
       let { brandId, showStatus } = data;
       this.$http({
-        url: this.$http.adornUrl("/product/brand/update"),
+        url: this.$http.adornUrl("/product/brand/update/status"),
         method: "post",
         data: this.$http.adornData({ brandId, showStatus }, false),
       }).then(({ data }) => {

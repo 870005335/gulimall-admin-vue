@@ -1,4 +1,3 @@
-<!--  -->
 <template>
   <div>
     <el-tree :data="categorys" :props="defaultProps" node-key="catId" ref="menuTree" @node-click="nodeClick">

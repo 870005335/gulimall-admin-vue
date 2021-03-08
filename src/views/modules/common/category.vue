@@ -1,7 +1,7 @@
 <!--  -->
 <template>
   <div>
-    <el-tree :data="menu" :props="defaultProps" node-key="catId" ref="menuTree" @node-click="nodeClick">
+    <el-tree :data="categorys" :props="defaultProps" node-key="catId" ref="menuTree" @node-click="nodeClick">
     </el-tree>
   </div>
 </template>
@@ -15,7 +15,7 @@ export default {
   data() {
     //这里存放数据
     return {
-      menu: [],
+      categorys: [],
       expandedKey: [],
       defaultProps: {
         children: "children",
@@ -30,13 +30,13 @@ export default {
   // 方法集合
   methods: {
     // 向后台发送请求获取树形结构数据
-    getMenus() {
+    getCategorys() {
       this.$http({
         url: this.$http.adornUrl("/product/category/list/tree"),
         method: "get",
       }).then((data) => {
         if (data.data.code === 0) {
-          this.menu = data.data.trees;
+          this.categorys = data.data.trees;
         }
       });
     },
@@ -46,7 +46,7 @@ export default {
   },
   // 生命周期 - 创建完成（可以访问当前this实例）
   created() {
-    this.getMenus();
+    this.getCategorys();
   },
   // 生命周期 - 挂载完成（可以访问DOM元素）
   mounted() {},

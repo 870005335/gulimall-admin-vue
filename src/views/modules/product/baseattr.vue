@@ -1,16 +1,24 @@
 <template>
   <div>
     <el-row :gutter="20">
-      <el-col :span="6"><category @tree-node-click="treeNodeClick"></category></el-col>
+      <el-col :span="6"
+        ><category @tree-node-click="treeNodeClick"></category
+      ></el-col>
       <el-col :span="18"
         ><div class="mod-config">
-          <el-form :inline="true" :model="dataForm" @keyup.enter.native="getDataList()">
+          <el-form
+            :inline="true"
+            :model="dataForm"
+            @keyup.enter.native="getDataList()"
+          >
             <el-form-item>
               <el-input v-model="dataForm.key" placeholder="参数名"></el-input>
             </el-form-item>
             <el-form-item>
               <el-button @click="getDataList()">查询</el-button>
-              <el-button type="success" @click="getAllDataList()">查询全部</el-button>
+              <el-button type="success" @click="getAllDataList()"
+                >查询全部</el-button
+              >
               <el-button
                 v-if="isAuth('product:baseattr:save')"
                 type="primary"
@@ -45,13 +53,120 @@
               align="center"
               label="属性名"
             ></el-table-column>
-             <el-table-column
+            <el-table-column
+              v-if="attrType === 1"
               prop="searchType"
               header-align="center"
               align="center"
               label="可检索"
+            >
+              <template slot-scope="scope">
+                <i class="el-icon-success" v-if="scope.row.searchType == 1"></i>
+                <i class="el-icon-error" v-else></i> </template
             ></el-table-column>
-          </el-table></div
+            <el-table-column
+              prop="valueType"
+              header-align="center"
+              align="center"
+              label="值类型"
+            >
+              <template slot-scope="scope">
+                <el-tag type="success" v-if="scope.row.valueType == 0"
+                  >单选</el-tag
+                >
+                <el-tag v-else>多选</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="icon"
+              header-align="center"
+              align="center"
+              label="图标"
+            ></el-table-column>
+            <el-table-column
+              prop="valueSelect"
+              header-align="center"
+              align="center"
+              label="可选值"
+            >
+              <template slot-scope="scope">
+                <el-tooltip placement="top"
+                  ><div slot="content">
+                    <span
+                      v-for="(i, index) in scope.row.valueSelect.split(';')"
+                      :key="index"
+                      >{{ i }}<br
+                    /></span>
+                  </div>
+                  <el-tag>{{
+                    scope.row.valueSelect.split(";")[0] + " ..."
+                  }}</el-tag></el-tooltip
+                >
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="enable"
+              header-align="center"
+              align="center"
+              label="启用"
+            >
+              <template slot-scope="scope">
+                <i class="el-icon-success" v-if="scope.row.enable == 1"></i>
+                <i class="el-icon-error" v-else></i> </template
+            ></el-table-column>
+            <el-table-column
+              prop="catelogName"
+              header-align="center"
+              align="center"
+              label="所属分类"
+            ></el-table-column>
+            <el-table-column
+              v-if="attrType == 1"
+              prop="groupName"
+              header-align="center"
+              align="center"
+              label="所属分组"
+            ></el-table-column>
+            <el-table-column
+              v-if="attrType == 1"
+              prop="showDesc"
+              header-align="center"
+              align="center"
+              label="快速展示"
+            >
+              <template slot-scope="scope">
+                <i class="el-icon-success" v-if="scope.row.showDesc == 1"></i>
+                <i class="el-icon-error" v-else></i>
+              </template>
+            </el-table-column>
+            <el-table-column
+              fixed="right"
+              width="150"
+              header-align="center"
+              align="center"
+              label="操作"
+              ><template slot-scope="scope">
+                <el-button
+                  type="text"
+                  size="small"
+                  @click="addOrUpdateHandle(scope.row.attrId)"
+                  >编辑</el-button
+                >
+                <el-button
+                  type="text"
+                  size="small"
+                  @click="deleteHandle(scope.row.attrId)"
+                  >删除</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+          <add-or-update
+            :type="attrType"
+            v-if="addOrUpdateVisible"
+            @refreshDataList="getDataList"
+            ref="addOrUpdate"
+          ></add-or-update></div
       ></el-col>
     </el-row>
   </div>
@@ -59,12 +174,21 @@
 
 <script>
 import Category from "../common/category";
+import AddOrUpdate from "./attr-add-or-update";
 // 这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）
 // 例如：import 《组件名称》 from '《组件路径》';
 
 export default {
   // import引入的组件需要注入到对象中才能使用
-  components: { Category },
+  components: { Category, AddOrUpdate },
+  props: {
+    attrType: {
+      type: Number,
+      default() {
+        return 1;
+      },
+    },
+  },
   data() {
     //这里存放数据
     return {
@@ -78,6 +202,7 @@ export default {
         key: "",
       },
       dataListSelections: [],
+      addOrUpdateVisible: false,
     };
   },
   // 监听属性 类似于data概念
@@ -92,8 +217,25 @@ export default {
       }
     },
     getAllDataList() {},
-    getDataList() {},
-    addOrUpdateHandle() {},
+    getDataList() {
+      this.dataListLoading = true;
+      let type = this.attrType == 0 ? "sale" : "base";
+      this.$http({
+        url: this.$http.adornUrl(`/product/attr/${type}/list/${this.catId}`),
+        method: "get",
+        params: this.$http.adornParams({
+          page: this.pageIndex,
+          limit: this.pageSize,
+          key: this.dataForm.key
+        }),
+      }).then(({ data }) => {});
+    },
+    addOrUpdateHandle(id) {
+      this.addOrUpdateVisible = true;
+      this.$nextTick(() => {
+        this.$refs.addOrUpdate.init(id);
+      });
+    },
     deleteHandle() {},
   },
   // 生命周期 - 创建完成（可以访问当前this实例）

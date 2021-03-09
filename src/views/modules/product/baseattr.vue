@@ -1,24 +1,16 @@
 <template>
   <div>
     <el-row :gutter="20">
-      <el-col :span="6"
-        ><category @tree-node-click="treeNodeClick"></category
-      ></el-col>
+      <el-col :span="6"><category @tree-node-click="treeNodeClick"></category></el-col>
       <el-col :span="18"
         ><div class="mod-config">
-          <el-form
-            :inline="true"
-            :model="dataForm"
-            @keyup.enter.native="getDataList()"
-          >
+          <el-form :inline="true" :model="dataForm" @keyup.enter.native="getDataList()">
             <el-form-item>
               <el-input v-model="dataForm.key" placeholder="参数名"></el-input>
             </el-form-item>
             <el-form-item>
               <el-button @click="getDataList()">查询</el-button>
-              <el-button type="success" @click="getAllDataList()"
-                >查询全部</el-button
-              >
+              <el-button type="success" @click="getAllDataList()">查询全部</el-button>
               <el-button
                 v-if="isAuth('product:baseattr:save')"
                 type="primary"
@@ -34,7 +26,13 @@
               >
             </el-form-item>
           </el-form>
-          <el-table border v-loading="dataListLoading" style="width: 100%">
+          <el-table
+            border
+            v-loading="dataListLoading"
+            style="width: 100%"
+            :data="dataList"
+            @selection-change="selectionChangeHandle"
+          >
             <el-table-column
               type="selection"
               header-align="center"
@@ -71,9 +69,7 @@
               label="值类型"
             >
               <template slot-scope="scope">
-                <el-tag type="success" v-if="scope.row.valueType == 0"
-                  >单选</el-tag
-                >
+                <el-tag type="success" v-if="scope.row.valueType == 0">单选</el-tag>
                 <el-tag v-else>多选</el-tag>
               </template>
             </el-table-column>
@@ -214,9 +210,16 @@ export default {
     treeNodeClick(data, node, component) {
       if (node.level === 3) {
         this.catId = data.catId;
+        this.getDataList();
       }
     },
-    getAllDataList() {},
+    selectionChangeHandle(val) {
+      this.dataListSelections = val;
+    },
+    getAllDataList() {
+      this.catId = 0;
+      this.getDataList();
+    },
     getDataList() {
       this.dataListLoading = true;
       let type = this.attrType == 0 ? "sale" : "base";
@@ -226,9 +229,18 @@ export default {
         params: this.$http.adornParams({
           page: this.pageIndex,
           limit: this.pageSize,
-          key: this.dataForm.key
+          key: this.dataForm.key,
         }),
-      }).then(({ data }) => {});
+      }).then(({ data }) => {
+        if (data && data.code === 0) {
+          this.dataList = data.page.list;
+          this.totalPage = data.page.totalCount;
+        } else {
+          this.dataList = [];
+          this.totalPage = 0;
+        }
+        this.dataListLoading = false;
+      });
     },
     addOrUpdateHandle(id) {
       this.addOrUpdateVisible = true;
@@ -236,10 +248,46 @@ export default {
         this.$refs.addOrUpdate.init(id);
       });
     },
-    deleteHandle() {},
+    deleteHandle(id) {
+      var ids = id ? [id] : this.dataListSelections.map((item) => item.attrId);
+      this.$confirm(
+        `确定对id[${ids.join(",")}]进行[${id ? "删除" : "批量删除"}]操作`,
+        "提示",
+        { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      )
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/attr/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          }).then(({ data }) => {
+            if (data.code === 0) {
+              this.$message({
+                message: "操作成功",
+                type: "success",
+                duration: 1000,
+                onClose: () => {
+                  this.getDataList();
+                },
+              });
+            } else {
+              this.$message.error(data.msg);
+            }
+          });
+        })
+        .catch(() => {
+          this.$message({
+            message: "已取消操作",
+            type: "info",
+            duration: 1000,
+          });
+        });
+    },
   },
   // 生命周期 - 创建完成（可以访问当前this实例）
-  created() {},
+  created() {
+    this.getDataList();
+  },
   // 生命周期 - 挂载完成（可以访问DOM元素）
   mounted() {},
   beforeCreate() {}, // 生命周期 - 创建之前

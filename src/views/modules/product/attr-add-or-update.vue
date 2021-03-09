@@ -3,15 +3,10 @@
     <el-dialog
       :title="dataForm.id ? '编辑' : '新增'"
       :visible.sync="visible"
-      :before-close="handleClose"
+      @closed="handleClose"
       :close-on-click-modal="false"
     >
-      <el-form
-        :rules="dataRule"
-        :model="dataForm"
-        ref="dataForm"
-        label-width="120px"
-      >
+      <el-form :rules="dataRule" :model="dataForm" ref="dataForm" label-width="120px">
         <el-form-item prop="attrName" label="属性名">
           <el-input v-model="dataForm.attrName" placeholder="属性名"></el-input>
         </el-form-item>
@@ -46,9 +41,7 @@
           <el-input v-model="dataForm.icon" placeholder="属性图标"></el-input>
         </el-form-item>
         <el-form-item prop="catelogId" label="所属分类">
-          <category-cascader
-            :catelogPath.sync="catelogPath"
-          ></category-cascader>
+          <category-cascader :catelogPath.sync="catelogPath"></category-cascader>
         </el-form-item>
         <el-form-item prop="attrGroupId" label="所属分组" v-if="type == 1">
           <el-select
@@ -134,9 +127,7 @@ export default {
       attrGroups: [],
       catelogPath: [],
       dataRule: {
-        attrName: [
-          { required: true, message: "属性名不能为空", trigger: "blur" },
-        ],
+        attrName: [{ required: true, message: "属性名不能为空", trigger: "blur" }],
         searchType: [
           {
             required: true,
@@ -151,9 +142,7 @@ export default {
             trigger: "blur",
           },
         ],
-        icon: [
-          { required: true, message: "属性图标不能为空", trigger: "blur" },
-        ],
+        icon: [{ required: true, message: "属性图标不能为空", trigger: "blur" }],
         attrType: [
           {
             required: true,
@@ -193,9 +182,7 @@ export default {
       this.dataForm.catelogId = path[path.length - 1];
       if (path && path.length == 3) {
         this.$http({
-          url: this.$http.adornUrl(
-            `/product/attrgroup/list/${this.dataForm.catelogId}`
-          ),
+          url: this.$http.adornUrl(`/product/attrgroup/list/${this.dataForm.catelogId}`),
           method: "get",
           params: this.$http.adornParams({ page: 1, limit: 1000 }),
         }).then(({ data }) => {
@@ -222,27 +209,30 @@ export default {
       this.$nextTick(() => {
         this.$refs["dataForm"].resetFields();
         if (this.dataForm.attrId) {
+          this.$http({
+            url: this.$http.adornUrl(`/product/attr/info/${this.dataForm.attrId}`),
+            method: "get",
+            params: this.$http.adornParams(),
+          }).then(({ data }) => {
+            if (data.code === 0) {
+              this.dataForm = data.attr;
+              this.dataForm.valueSelect = data.attr.valueSelect.split(";");
+              this.catelogPath = data.attr.catelogPath;
+              this.$nextTick(() => {
+                this.dataForm.attrGroupId = data.attr.attrGroupId;
+              });
+            }
+          });
         }
       });
     },
     handleClose() {
-      this.dataForm = {
-        attrName: "",
-        icon: "",
-        attrGroupId: "",
-        valueSelect: "",
-        attrType: "",
-        valueType: 1,
-        searchType: 1,
-        showDesc: 1,
-        enable: 1,
-      };
-      this.visible = false;
+      this.catelogPath = [];
     },
     dataFormSubmit() {
-         console.log(this.dataForm.catelogId)
       this.$refs["dataForm"].validate((valid) => {
         if (valid) {
+          this.dataForm.valueSelect = this.dataForm.valueSelect.join(";");
           this.$http({
             url: this.$http.adornUrl(
               `/product/attr/${this.dataForm.attrId == 0 ? "save" : "update"}`
@@ -266,8 +256,6 @@ export default {
           });
         }
       });
-      this.dataForm.valueSelect = this.dataForm.valueSelect.join(";");
-      console.log(this.dataForm);
     },
   },
   //声明周期 - 创建完成（可以访问当前this实例）
@@ -283,5 +271,4 @@ export default {
   activated() {}, //如果页面有keep-alive缓存功能，这个函数会触发
 };
 </script>
-<style scoped>
-</style>
+<style scoped></style>

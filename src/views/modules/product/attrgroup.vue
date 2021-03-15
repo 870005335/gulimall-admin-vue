@@ -1,16 +1,28 @@
 <template>
   <div>
     <el-row :gutter="20">
-      <el-col :span="6"><category @tree-node-click="treeNodeClick"></category></el-col>
+      <el-col :span="6"
+        ><category @tree-node-click="treeNodeClick"></category
+      ></el-col>
       <el-col :span="18">
         <div class="mod-config">
-          <el-form :inline="true" :model="dataForm" @keyup.enter.native="getDataList()">
+          <el-form
+            :inline="true"
+            :model="dataForm"
+            @keyup.enter.native="getDataList()"
+          >
             <el-form-item>
-              <el-input v-model="dataForm.key" placeholder="参数名" clearable></el-input>
+              <el-input
+                v-model="dataForm.key"
+                placeholder="参数名"
+                clearable
+              ></el-input>
             </el-form-item>
             <el-form-item>
               <el-button @click="getDataList()">查询</el-button>
-              <el-button type="success" @click="getAllDataList()">查询全部</el-button>
+              <el-button type="success" @click="getAllDataList()"
+                >查询全部</el-button
+              >
               <el-button
                 v-if="isAuth('product:attrgroup:save')"
                 type="primary"
@@ -81,7 +93,6 @@
               align="center"
               label="所属分类id"
             >
-            
             </el-table-column>
             <el-table-column
               fixed="right"
@@ -91,6 +102,12 @@
               label="操作"
             >
               <template slot-scope="scope">
+                <el-button
+                  type="text"
+                  size="small"
+                  @click="relationHandle(scope.row.attrGroupId)"
+                  >关联</el-button
+                >
                 <el-button
                   type="text"
                   size="small"
@@ -121,7 +138,8 @@
             v-if="addOrUpdateVisible"
             ref="addOrUpdate"
             @refreshDataList="getDataList"
-          ></add-or-update></div
+          ></add-or-update>
+          <relation-update ref="relationUpdate" @refreshData="getDataList"></relation-update></div
       ></el-col>
     </el-row>
   </div>
@@ -131,12 +149,14 @@
 // 这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）
 // 例如：import 《组件名称》 from '《组件路径》';
 import Category from "../common/category.vue";
+import RelationUpdate from "./attr-group-relation.vue";
 import AddOrUpdate from "./attrgroup-add-or-update.vue";
 export default {
   // import引入的组件需要注入到对象中才能使用
   components: {
     Category,
     AddOrUpdate,
+    RelationUpdate,
   },
   data() {
     return {
@@ -151,21 +171,28 @@ export default {
       dataListLoading: false,
       dataListSelections: [],
       addOrUpdateVisible: false,
+      relationVisible: false
     };
   },
   activated() {
     this.getDataList();
   },
   methods: {
+    relationHandle(id) {
+      this.relationVisible = true;
+      this.$nextTick(() => {
+        this.$refs.relationUpdate.init(id);
+      });
+    },
     treeNodeClick(data, node, component) {
       if (node.level === 3) {
-          this.catId = data.catId;
-          this.getDataList();
+        this.catId = data.catId;
+        this.getDataList();
       }
     },
     getAllDataList() {
       this.catId = 0;
-      this.getDataList();  
+      this.getDataList();
     },
     // 获取数据列表
     getDataList() {
@@ -206,7 +233,6 @@ export default {
     },
     // 新增 / 修改
     addOrUpdateHandle(id) {
-      this.addOrUpdateVisible = true;
       this.$nextTick(() => {
         this.$refs.addOrUpdate.init(id);
       });

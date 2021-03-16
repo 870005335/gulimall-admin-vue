@@ -1,7 +1,13 @@
 <template>
   <div>
     <el-dialog :visible.sync="visible" :close-on-click-modal="false">
-      <el-dialog title="选择属性" :visible.sync="innerVisible" width="40%">
+      <el-dialog
+        title="选择属性"
+        :visible.sync="innerVisible"
+        width="40%"
+        append-to-body
+        :close-on-click-modal="false"
+      >
         <el-form
           :data="dataForm"
           :inline="true"
@@ -23,11 +29,52 @@
           border
           v-loading="dataListLoading"
           @selection-change="innerSelectionChangeHandle"
-        ></el-table>
+          style="width: 100%"
+        >
+          <el-table-column
+            type="selection"
+            header-align="center"
+            align="center"
+          ></el-table-column>
+          <el-table-column
+            header-align="center"
+            align="center"
+            prop="attrId"
+            label="属性Id"
+          ></el-table-column>
+          <el-table-column
+            header-align="center"
+            align="center"
+            prop="attrName"
+            label="属性名"
+          ></el-table-column>
+          <el-table-column
+            type="selection"
+            header-align="center"
+            align="center"
+            prop="icon"
+            label="属性图标"
+          ></el-table-column>
+          <el-table-column
+            header-align="center"
+            align="center"
+            prop="valueSelect"
+            label="可选值列表"
+          ></el-table-column>
+        </el-table>
+        <el-pagination
+          @size-change="sizeChangeHandle"
+          @current-change="currentChangeHandle"
+          :current-page="pageIndex"
+          :page-sizes="[10, 20, 50, 100]"
+          :page-size="pageSize"
+          :total="totalPage"
+          layout="total, sizes, prev, pager, next, jumper"
+        ></el-pagination>
         <span slot="footer" class="dialog-footer">
           <el-button @click="innerVisible = false">取 消</el-button>
-          <el-button type="primary" @click="innerVisible = false"
-            >确 定</el-button
+          <el-button type="primary" @click="submitAddRealtion"
+            >确认新增</el-button
           >
         </span>
       </el-dialog>
@@ -106,6 +153,9 @@ export default {
       dataList: [],
       dataListLoading: false,
       innerSelectionChangeHandle: [],
+      pageIndex: 1,
+      pageSize: 10,
+      totalPage: 0,
     };
   },
   //计算属性 类似于data概念
@@ -114,6 +164,23 @@ export default {
   watch: {},
   //方法集合
   methods: {
+    currentChangeHandle() {},
+    sizeChangeHandle() {},
+    getDataList() {
+      this.dataListLoading = true;
+      this.$http({
+        url: this.$http.adornUrl(`/product/attrgroup/${this.attrGroupId}/noattr/relation`),
+        method: "get",
+        params: this.$http.adornParams({
+          page: this.pageIndex,
+          limit: this.pageSize,
+          key: this.dataForm.key
+        }),
+      }).then(({ data }) => {
+        console.log(data)
+      });
+    },
+    submitAddRealtion() {},
     relationRemove(attrId) {
       let removes = [];
       removes.push({ attrId, attrGroupId: this.attrGroupId });
@@ -122,8 +189,9 @@ export default {
         method: "post",
         data: this.$http.adornData(removes, false),
       }).then(({ data }) => {
-        if (data.code == 0) {
+        if (data.code === 0) {
           this.$message({ type: "success", message: "删除成功" });
+          console.log(this.attrGroupId);
           this.init(this.attrGroupId);
         } else {
           this.$message({ type: "error", message: data.msg });
@@ -131,22 +199,25 @@ export default {
       });
     },
     addRelation() {
+      this.getDataList();
       this.innerVisible = true;
     },
     init(id) {
       this.attrGroupId = id || 0;
       this.visible = true;
-      this.$http({
-        url: this.$http.adornUrl(
-          `/product/attrgroup/${this.attrGroupId}/attr/relation`
-        ),
-        method: "get",
-        params: this.$http.adornParams({}),
-      }).then(({ data }) => {
-        if (data.code === 0) {
-          this.relationAttrs = data.data;
-        }
-      });
+      if (id) {
+        this.$http({
+          url: this.$http.adornUrl(
+            `/product/attrgroup/${this.attrGroupId}/attr/relation`
+          ),
+          method: "get",
+          params: this.$http.adornParams({}),
+        }).then(({ data }) => {
+          if (data.code === 0) {
+            this.relationAttrs = data.data;
+          }
+        });
+      }
     },
   },
   //声明周期 - 创建完成（可以访问当前this实例）

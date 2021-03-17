@@ -48,6 +48,8 @@ export default {
     },
     paths(val) {
       this.$emit("update:catelogPath", val);
+      //还可以使用pubsub-js进行传值
+      PubSub.publish("catPath", val);
     },
   },
   // 方法集合

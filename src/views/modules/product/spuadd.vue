@@ -59,23 +59,76 @@
               </el-input-number>
             </el-form-item>
             <el-form-item prop="decript" label="商品介绍">
-                <multi-upload v-model="spu.decript"></multi-upload>
+              <multi-upload v-model="spu.decript"></multi-upload>
             </el-form-item>
             <el-form-item prop="images" label="商品图集">
-                <multi-upload v-model="spu.images"></multi-upload>
+              <multi-upload v-model="spu.images"></multi-upload>
             </el-form-item>
             <el-form-item>
-                <el-button type="success" @click="collectSpuBaseInfo">下一步：设置基本参数</el-button>
+              <el-button type="success" @click="collectSpuBaseInfo"
+                >下一步：设置基本参数</el-button
+              >
             </el-form-item>
           </el-form>
         </el-card></el-col
       >
+      <el-col :span="24" v-show="step == 1">
+        <el-card class="box-card" style="width: 80%; margin: 20px auto">
+          <el-tabs tab-position="left" style="width: 98%">
+            <el-tab-pane
+              v-for="(group, gidx) in dataResp.attrGroups"
+              :key="group.attrGroupId"
+              :label="group.attrGroup"
+              ><el-form ref="form" :model="spu">
+                <el-form-item
+                  v-for="(attr, aidx) in group.attrs"
+                  :key="attr.attrId"
+                  :label="attr.attrName"
+                >
+                  <el-input
+                    v-model="dataResp.baseAttrs[gidx][aidx].attrId"
+                    type="hidden"
+                    v-show="false"
+                  ></el-input
+                  ><el-select
+                    v-model="dataResp.baseAttrs[gidx][aidx].attrValues"
+                    :multiple="attr.valueType == 1"
+                    filterable
+                    allow-create
+                    default-first-option
+                    placeholder="请选择或输入值"
+                  >
+                    <el-option
+                      v-for="(val, vidx) in attr.valueSelect.split(';')"
+                      :key="vidx"
+                      :label="val"
+                      :value="val"
+                    ></el-option>
+                  </el-select>
+                  <el-checkbox
+                    v-model="dataResp.baseAttrs[gidx][aidx].showDesc"
+                    :true-label="1"
+                    :false-label="0"
+                    >快速展示</el-checkbox
+                  ></el-form-item
+                ></el-form
+              ></el-tab-pane
+            >
+          </el-tabs>
+          <div style="margin: auto">
+            <el-button type="primary" @click="step = 0">上一步</el-button>
+            <el-button type="success" @click="generateSaleAttrs"
+              >下一步：设置销售属性</el-button
+            >
+          </div>
+        </el-card>
+      </el-col>
     </el-row>
   </div>
 </template>
 
 <script>
-import MultiUpload from '@/components/upload/multiUpload.vue';
+import MultiUpload from "@/components/upload/multiUpload.vue";
 import BrandSelect from "../common/brand-select.vue";
 import CategoryCascader from "../common/category-cascader.vue";
 //这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）
@@ -95,11 +148,31 @@ export default {
         catelogId: 0,
         brandId: 0,
         weight: 0,
-        bounds: {
-
-        }
+        bounds: {},
       },
-      spuBaseInfoRules: {},
+      spuBaseInfoRules: {
+        spuName: [{ required: true, message: "请输入商品名称", trigger: "blur" }],
+        spuDescription: [
+          { required: true, message: "请编写一个简单描述", trigger: "blur" },
+        ],
+        catelogId: [{ required: true, message: "请选择一个分类", trigger: "blur" }],
+        brandId: [{ required: true, message: "请选择一个品牌", trigger: "blur" }],
+        decript: [{ required: true, message: "请上传商品详情图集", trigger: "blur" }],
+        images: [{ required: true, message: "请上传商品图片集", trigger: "blur" }],
+        weight: [
+          {
+            type: "number",
+            required: true,
+            message: "请填写正确的重量值",
+            trigger: "blur",
+          },
+        ],
+      },
+      dataResp: {
+        // 后台返回的所有数据
+        baseAttrs: [],
+        steped: [false, false, false, false, false],
+      },
     };
   },
   //计算属性 类似于data概念
@@ -108,9 +181,60 @@ export default {
   watch: {},
   //方法集合
   methods: {
-      collectSpuBaseInfo() {
-
+    collectSpuBaseInfo() {
+      this.$refs.spuBaseForm.validate((valid) => {
+        if (valid) {
+          this.step = 1;
+          this.showBaseAttrs();
+        } else {
+          return false;
+        }
+      });
+    },
+    showBaseAttrs() {
+      if (!this.dataResp.steped[0]) {
+        this.$http({
+          url: this.$http.adornUrl(`/product/attrgroup/${this.spu.catelogId}/withattr`),
+          method: "get",
+          params: this.$http.adornParams({}),
+        }).then(({ data }) => {
+          if (code === 0) {
+            // 先对表单的baseAttrs进行初始化
+            data.data.forEach((item) => {
+              let attrArray = [];
+              item.attrs.forEach((attr) => {
+                attrArray.push({
+                  attrId: attr.attrId,
+                  attrValue: "",
+                  showDesc: attr.showDesc,
+                });
+              });
+              this.dataResp.baseAttrs.push(attrArray);
+            });
+            this.dataResp.steped[0] = 0;
+            this.dataResp.attrGroups = data.data;
+          } else {
+            this.$message.error(data.msg);
+          }
+        });
       }
+    },
+    getMemberLevels() {
+      this.$http({
+        url: this.$http.adornUrl("/member/memberlevel/list"),
+        method: "get",
+        params: this.$http.adornParams({
+          page: 1,
+          limit: 500
+        }),
+      }).then(({ data }) => {
+        if (data.code === 0) {
+          this.dataResp.memberLevels = data.page.list;
+        } else {
+          this.$message.error(data.msg);
+        }
+      });
+    },
   },
   //声明周期 - 创建完成（可以访问当前this实例）
   created() {},
@@ -126,6 +250,7 @@ export default {
     this.brandIdSub = PubSub.subscribe("brandId", (msg, val) => {
       this.spu.brandId = val;
     });
+    this.getMemberLevels();
   },
   beforeCreate() {}, //生命周期 - 创建之前
   beforeMount() {}, //生命周期 - 挂载之前
@@ -139,5 +264,4 @@ export default {
   activated() {}, //如果页面有keep-alive缓存功能，这个函数会触发
 };
 </script>
-<style scoped>
-</style>
+<style scoped></style>

@@ -1,9 +1,16 @@
-<!--  -->
 <template>
   <div class="mod-config">
-    <el-form :inline="true" :model="dataForm" @keyup.enter.native="getDataList()">
+    <el-form
+      :inline="true"
+      :model="dataForm"
+      @keyup.enter.native="getDataList()"
+    >
       <el-form-item>
-        <el-input v-model="dataForm.key" placeholder="参数名" clearable></el-input>
+        <el-input
+          v-model="dataForm.key"
+          placeholder="参数名"
+          clearable
+        ></el-input>
       </el-form-item>
       <el-form-item>
         <el-button @click="getDataList()">查询</el-button>
@@ -28,6 +35,7 @@
       v-loading="dataListLoading"
       @selction-change="selectionChangeHandle"
       style="width: 100%"
+      fixed
     >
       <el-table-column
         type="selection"
@@ -76,13 +84,24 @@
         header-align="center"
         align="center"
         label="头像"
+        ><template slot-scope="scope">
+          <el-image
+            style="width: 100px; height: 100px"
+            :src="scope.row.header"
+            fit="fit"
+          ></el-image> </template
       ></el-table-column>
       <el-table-column
         prop="gender"
         header-align="center"
         align="center"
         label="性别"
-      ></el-table-column>
+      >
+        <template slot-scope="scope">
+          <span v-if="scope.row.gender == 0">男</span>
+          <span v-if="scope.row.gender == 1">女</span>
+        </template></el-table-column
+      >
       <el-table-column
         prop="birth"
         header-align="center"
@@ -94,7 +113,14 @@
         header-align="center"
         align="center"
         label="所在城市"
-      ></el-table-column>
+        ><template slot-scope="scope"
+          ><el-cascader
+            :options="provinceAndCityData"
+            v-model="scope.row.city"
+            disabled
+          ></el-cascader
+        ></template>
+      </el-table-column>
       <el-table-column
         prop="job"
         header-align="center"
@@ -138,6 +164,7 @@
             inactive-color="#ff4949"
             :active-value="1"
             :inactive-value="0"
+            @change="updateMemberStatus(scope.row)"
           ></el-switch></template></el-table-column
       ><el-table-column
         prop="createTime"
@@ -153,8 +180,25 @@
         width="50"
       >
         <template slot-scope="scope">
+          <el-button
+            type="text"
+            size="small"
+            @click="addOrUpdateHandle(scope.row.id)"
+            >编辑</el-button
+          >
+          <el-button
+            type="text"
+            size="small"
+            @click="deleteHandle(scope.row.id)"
+            >移除</el-button
+          >
           <el-button type="text" size="small">送券</el-button>
-          <el-button type="text" size="small">查订单</el-button>
+          <el-button
+            type="text"
+            size="small"
+            @click="getMemberOrderList(scope.row.id)"
+            >查订单</el-button
+          >
         </template></el-table-column
       ></el-table
     >
@@ -167,19 +211,27 @@
       :total="totalPage"
       layout="total, sizes, prev, pager, next, jumper"
     ></el-pagination>
+    <member-add-or-update
+      v-if="addOrUpdateVisible"
+      ref="addOrUpdate"
+      @refreshDataList="getDataList()"
+    ></member-add-or-update>
   </div>
 </template>
 
 <script>
+import MemberAddOrUpdate from "./member-add-or-update.vue";
+import { provinceAndCityData } from "element-china-area-data";
 // 这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）
 // 例如：import 《组件名称》 from '《组件路径》';
 
 export default {
   // import引入的组件需要注入到对象中才能使用
-  components: {},
+  components: { MemberAddOrUpdate },
   data() {
     //这里存放数据
     return {
+      provinceAndCityData: provinceAndCityData,
       dataForm: {
         key: "",
       },
@@ -189,6 +241,7 @@ export default {
       pageIndex: 1,
       pageSize: 10,
       totalPage: 0,
+      addOrUpdateVisible: false,
     };
   },
   // 监听属性 类似于data概念
@@ -197,6 +250,63 @@ export default {
   watch: {},
   // 方法集合
   methods: {
+    updateMemberStatus(row) {
+      console.log(row);
+      let { id, status } = row;
+      this.$http({
+        url: this.$http.adornUrl("/member/member/update/status"),
+        method: "post",
+        data: this.$http.adornData({ id, status }, false),
+      }).then(({ data }) => {
+        if (data.code === 0) {
+          this.$message({
+            type: "success",
+            message: "操作成功",
+            duration: 1000,
+            onClose: () => {
+              this.getDataList();
+            },
+          });
+        } else {
+          this.$message.error(data.msg);
+        }
+      });
+    },
+    deleteHandle(id) {
+      var ids = id
+        ? [id]
+        : this.dataListSelections.map((item) => {
+            return item.id;
+          });
+      this.$confirm(
+        `确定对[id=${ids.join(",")}]进行[${id ? "删除" : "批量删除"}]操作?`,
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        }
+      ).then(() => {
+        this.$http({
+          url: this.$http.adornUrl("/member/member/delete"),
+          method: "post",
+          data: this.$http.adornData(ids, false),
+        }).then(({ data }) => {
+          if (data.code === 0) {
+            this.$message({
+              message: "操作成功",
+              type: "success",
+              duration: 1000,
+              onClose: () => {
+                this.getDataList();
+              },
+            });
+          } else {
+            this.$message.error(data.msg);
+          }
+        });
+      });
+    },
     sizeChangeHandle(pageSize) {
       this.pageSize = pageSize;
       this.pageIndex = 1;
@@ -209,8 +319,12 @@ export default {
     selectionChangeHandle(val) {
       this.dataListSelections = val;
     },
-    addOrUpdateHandle() {},
-    deleteHandle() {},
+    addOrUpdateHandle(id) {
+      this.addOrUpdateVisible = true;
+      this.$nextTick(() => {
+        this.$refs.addOrUpdate.init(id);
+      });
+    },
     getDataList() {
       this.dataListLoading = true;
       this.$http({
@@ -224,6 +338,9 @@ export default {
       }).then(({ data }) => {
         if (data.code === 0) {
           this.dataList = data.page.list;
+          this.dataList.forEach((item) => {
+            item.city = item.city.split(",");
+          });
           this.totalPage = data.page.totalPage;
         } else {
           this.$message.error(data.msg);

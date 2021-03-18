@@ -277,7 +277,6 @@ export default {
     },
     // 修改品牌展示状态
     updateBrandStatus(data) {
-      console.log(data);
       let { brandId, showStatus } = data;
       this.$http({
         url: this.$http.adornUrl("/product/brand/update/status"),

@@ -125,6 +125,8 @@ export default {
     this.getDataList();
   },
   methods: {
+    previewHandle() {},
+    commentHandle() {},
     getSkuDetails(row, expand) {
       //sku详情查询
       console.log("展开某行...", row, expand);

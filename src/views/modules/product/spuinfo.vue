@@ -32,7 +32,7 @@
         label="描述"
       ></el-table-column>
       <el-table-column
-        prop="catelogId"
+        prop="catalogId"
         header-align="center"
         align="center"
         label="分类Id"

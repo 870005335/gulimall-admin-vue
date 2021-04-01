@@ -249,6 +249,7 @@ export default {
       });
     },
     deleteHandle(id) {
+      let type = this.attrType == 0 ? "sale" : "base";
       var ids = id ? [id] : this.dataListSelections.map((item) => item.attrId);
       this.$confirm(
         `确定对id[${ids.join(",")}]进行[${id ? "删除" : "批量删除"}]操作`,
@@ -257,7 +258,7 @@ export default {
       )
         .then(() => {
           this.$http({
-            url: this.$http.adornUrl("/product/attr/delete"),
+            url: this.$http.adornUrl(`/product/attr/${type}/delete`),
             method: "post",
             data: this.$http.adornData(ids, false),
           }).then(({ data }) => {

@@ -197,7 +197,6 @@ export default {
         this.dataForm.attrGroupName = "";
       }
       this.dataForm.catelogId = path[path.length - 1];
-      console.log(this.dataForm.catelogId)
       if (path && path.length == 3) {
         this.$http({
           url: this.$http.adornUrl(
